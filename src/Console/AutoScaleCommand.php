@@ -195,16 +195,25 @@ class AutoScaleCommand extends BaseQueueCommand
 
     private function initializeServices(): void
     {
-        $workersConfig = config($this->getContext(), 'queue.workers', []);
-        $this->config = $workersConfig;
+        // Ops config lives under queue_ops.*; per-queue KEPT keys (priority/
+        // memory_limit/timeout/max_jobs) still come from core queue.workers.queues.
+        $opsConfig = config($this->getContext(), 'queue_ops', []);
+        $coreQueues = config($this->getContext(), 'queue.workers.queues', []);
+        $mergedQueues = $this->mergeQueueConfigs(
+            $opsConfig['queues'] ?? [],
+            is_array($coreQueues) ? $coreQueues : [],
+        );
+        // $this->config mirrors the former queue.workers shape (with merged queues)
+        // so the display/validate/schedule helpers keep working unchanged.
+        $this->config = array_merge($opsConfig, ['queues' => $mergedQueues]);
 
         $logger = $this->getService(LoggerInterface::class);
         $queueManager = $this->getService(QueueManager::class);
         $workerMonitor = $this->getService(WorkerMonitor::class);
         $basePath = base_path($this->getContext());
 
-        $processConfig = $workersConfig['process'] ?? [];
-        $autoScalingConfig = $workersConfig['auto_scaling'] ?? [];
+        $processConfig = $opsConfig['process'] ?? [];
+        $autoScalingConfig = $opsConfig['auto_scaling'] ?? [];
 
         $processManagerConfig = array_merge($processConfig, [
             'max_workers' => $processConfig['max_workers']
@@ -214,7 +223,7 @@ class AutoScaleCommand extends BaseQueueCommand
 
         $autoScalerConfig = [
             'enabled' => (bool) ($autoScalingConfig['enabled'] ?? false),
-            'queues' => $workersConfig['queues'] ?? [],
+            'queues' => $mergedQueues,
             'auto_scale' => [
                 'scale_up_threshold' => (int) ($autoScalingConfig['scale_up_threshold'] ?? 100),
                 'scale_down_threshold' => (int) ($autoScalingConfig['scale_down_threshold'] ?? 10),
@@ -236,8 +245,32 @@ class AutoScaleCommand extends BaseQueueCommand
 
         $this->autoScaler = new AutoScaler($this->processManager, $queueManager, $logger, $autoScalerConfig);
         $this->scheduledScaler = new ScheduledScaler($this->processManager, $logger);
-        $this->resourceMonitor = new ResourceMonitor($logger, $workersConfig);
+        $this->resourceMonitor = new ResourceMonitor($logger, $opsConfig);
         $this->streamingMonitor = new StreamingMonitor($this->processManager, $logger);
+    }
+
+    /**
+     * Merge per-queue ops config (workers/max_workers/auto_scale, from queue_ops)
+     * with the per-queue KEPT keys (priority/memory_limit/timeout/max_jobs, from
+     * core queue.workers.queues).
+     *
+     * @param array<string, mixed> $opsQueues
+     * @param array<string, mixed> $coreQueues
+     * @return array<string, array<string, mixed>>
+     */
+    private function mergeQueueConfigs(array $opsQueues, array $coreQueues): array
+    {
+        $merged = [];
+        /** @var array<string> $names */
+        $names = array_unique(array_merge(array_keys($opsQueues), array_keys($coreQueues)));
+        foreach ($names as $name) {
+            /** @var array<string, mixed> $core */
+            $core = is_array($coreQueues[$name] ?? null) ? $coreQueues[$name] : [];
+            /** @var array<string, mixed> $ops */
+            $ops = is_array($opsQueues[$name] ?? null) ? $opsQueues[$name] : [];
+            $merged[$name] = array_merge($core, $ops);
+        }
+        return $merged;
     }
 
     private function executeRun(InputInterface $input): int
@@ -382,7 +415,14 @@ class AutoScaleCommand extends BaseQueueCommand
 
         if ((bool) $input->getOption('reload')) {
             $this->info("🔄 Reloading configuration...");
-            $this->config = config($this->getContext(), 'queue.workers', []);
+            $opsConfig = config($this->getContext(), 'queue_ops', []);
+            $coreQueues = config($this->getContext(), 'queue.workers.queues', []);
+            $this->config = array_merge($opsConfig, [
+                'queues' => $this->mergeQueueConfigs(
+                    $opsConfig['queues'] ?? [],
+                    is_array($coreQueues) ? $coreQueues : [],
+                ),
+            ]);
             $this->success("Configuration reloaded successfully");
             return self::SUCCESS;
         }

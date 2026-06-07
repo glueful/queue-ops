@@ -44,7 +44,9 @@ final class QueueOpsServiceProvider extends \Glueful\Extensions\ServiceProvider
 
             // Process supervision / auto-scaling tree (copied from core in WS4c).
             // Config derivation mirrors AutoScaleCommand::initializeServices():
-            // everything is read from config('queue.workers', []).
+            // ops config is read from config('queue_ops', []); per-queue KEPT keys
+            // (priority/memory_limit/timeout/max_jobs) still come from core
+            // config('queue.workers.queues', []).
             ProcessFactory::class => new FactoryDefinition(
                 ProcessFactory::class,
                 static function (ContainerInterface $c): ProcessFactory {
@@ -60,10 +62,10 @@ final class QueueOpsServiceProvider extends \Glueful\Extensions\ServiceProvider
                 ProcessManager::class,
                 static function (ContainerInterface $c): ProcessManager {
                     $context = $c->get(ApplicationContext::class);
-                    /** @var array<string, mixed> $workersConfig */
-                    $workersConfig = config($context, 'queue.workers', []);
+                    /** @var array<string, mixed> $opsConfig */
+                    $opsConfig = config($context, 'queue_ops', []);
                     /** @var array<string, mixed> $processConfig */
-                    $processConfig = $workersConfig['process'] ?? [];
+                    $processConfig = $opsConfig['process'] ?? [];
 
                     $processManagerConfig = array_merge($processConfig, [
                         'max_workers' => $processConfig['max_workers']
@@ -85,16 +87,22 @@ final class QueueOpsServiceProvider extends \Glueful\Extensions\ServiceProvider
                 AutoScaler::class,
                 static function (ContainerInterface $c): AutoScaler {
                     $context = $c->get(ApplicationContext::class);
-                    /** @var array<string, mixed> $workersConfig */
-                    $workersConfig = config($context, 'queue.workers', []);
+                    /** @var array<string, mixed> $opsConfig */
+                    $opsConfig = config($context, 'queue_ops', []);
                     /** @var array<string, mixed> $processConfig */
-                    $processConfig = $workersConfig['process'] ?? [];
+                    $processConfig = $opsConfig['process'] ?? [];
                     /** @var array<string, mixed> $autoScalingConfig */
-                    $autoScalingConfig = $workersConfig['auto_scaling'] ?? [];
+                    $autoScalingConfig = $opsConfig['auto_scaling'] ?? [];
 
                     $autoScalerConfig = [
                         'enabled' => (bool) ($autoScalingConfig['enabled'] ?? false),
-                        'queues' => $workersConfig['queues'] ?? [],
+                        // Split-read: ops keys (workers/max_workers/auto_scale) from
+                        // queue_ops.queues + kept keys (priority/memory_limit/timeout/
+                        // max_jobs) from core queue.workers.queues.
+                        'queues' => self::mergeQueueConfigs(
+                            $opsConfig['queues'] ?? [],
+                            config($context, 'queue.workers.queues', []),
+                        ),
                         'auto_scale' => [
                             'scale_up_threshold' => (int) ($autoScalingConfig['scale_up_threshold'] ?? 100),
                             'scale_down_threshold' => (int) ($autoScalingConfig['scale_down_threshold'] ?? 10),
@@ -134,11 +142,11 @@ final class QueueOpsServiceProvider extends \Glueful\Extensions\ServiceProvider
                 ResourceMonitor::class,
                 static function (ContainerInterface $c): ResourceMonitor {
                     $context = $c->get(ApplicationContext::class);
-                    /** @var array<string, mixed> $workersConfig */
-                    $workersConfig = config($context, 'queue.workers', []);
+                    /** @var array<string, mixed> $opsConfig */
+                    $opsConfig = config($context, 'queue_ops', []);
                     return new ResourceMonitor(
                         $c->get(LoggerInterface::class),
-                        $workersConfig,
+                        $opsConfig,
                     );
                 },
                 true,
@@ -156,9 +164,39 @@ final class QueueOpsServiceProvider extends \Glueful\Extensions\ServiceProvider
         ];
     }
 
+    /**
+     * Merge per-queue ops config (workers/max_workers/auto_scale, from queue_ops)
+     * with the per-queue KEPT keys (priority/memory_limit/timeout/max_jobs, from
+     * core queue.workers.queues). The AutoScaler reads both: max_workers from ops,
+     * memory_limit/timeout/max_jobs from core.
+     *
+     * @param array<string, mixed> $opsQueues
+     * @param array<string, mixed> $coreQueues
+     * @return array<string, array<string, mixed>>
+     */
+    private static function mergeQueueConfigs(array $opsQueues, array $coreQueues): array
+    {
+        $merged = [];
+        /** @var array<string> $names */
+        $names = array_unique(array_merge(array_keys($opsQueues), array_keys($coreQueues)));
+        foreach ($names as $name) {
+            /** @var array<string, mixed> $core */
+            $core = is_array($coreQueues[$name] ?? null) ? $coreQueues[$name] : [];
+            /** @var array<string, mixed> $ops */
+            $ops = is_array($opsQueues[$name] ?? null) ? $opsQueues[$name] : [];
+            // Ops keys win on overlap (there is none today); kept keys come from core.
+            $merged[$name] = array_merge($core, $ops);
+        }
+        return $merged;
+    }
+
     public function register(ApplicationContext $context): void
     {
-        // mergeConfig added in WS5b.
+        // Own the relocated ops config (WS5b): the `queue.workers.{process,
+        // auto_scaling,resource_limits,resource_thresholds,supervisor}` blocks and
+        // the per-queue worker/max_worker/auto_scale keys now live under `queue_ops.*`.
+        $this->mergeConfig('queue_ops', require __DIR__ . '/../config/queue_ops.php');
+
         // queue_workers + queue_job_metrics schema. Registered unconditionally:
         // ops persistence IS this extension's purpose (not config-gated).
         $this->loadMigrationsFrom(
