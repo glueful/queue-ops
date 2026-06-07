@@ -107,12 +107,12 @@ class ProcessFactory
         $command = [
             $phpBinary,
             'glueful',
-            'queue:work',
+            'queue:supervise',
             'process',
             '--queue=' . $queue,
         ];
 
-        // Add worker options supported by queue:work process mode
+        // Add worker options supported by queue:supervise process mode
         if ($options->sleep > 0) {
             $command[] = '--sleep=' . $options->sleep;
         }

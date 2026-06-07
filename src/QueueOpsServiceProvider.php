@@ -163,6 +163,10 @@ final class QueueOpsServiceProvider extends \Glueful\Extensions\ServiceProvider
 
     public function boot(ApplicationContext $context): void
     {
-        // discoverCommands added in WS4 task 4d.
+        // Auto-discover #[AsCommand] CLI commands (SuperviseCommand + AutoScaleCommand).
+        $this->discoverCommands(
+            'Glueful\\Extensions\\QueueOps\\Console',
+            __DIR__ . '/Console',
+        );
     }
 }
