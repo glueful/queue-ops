@@ -158,7 +158,14 @@ final class QueueOpsServiceProvider extends \Glueful\Extensions\ServiceProvider
 
     public function register(ApplicationContext $context): void
     {
-        // mergeConfig + loadMigrationsFrom added in WS5.
+        // mergeConfig added in WS5b.
+        // queue_workers + queue_job_metrics schema. Registered unconditionally:
+        // ops persistence IS this extension's purpose (not config-gated).
+        $this->loadMigrationsFrom(
+            __DIR__ . '/../migrations',
+            \Glueful\Database\Migrations\MigrationPriority::DEFAULT,
+            'glueful/queue-ops',
+        );
     }
 
     public function boot(ApplicationContext $context): void
