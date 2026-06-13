@@ -243,9 +243,15 @@ class AutoScaleCommand extends BaseQueueCommand
         $processFactory = new ProcessFactory($logger, $basePath);
         $this->processManager = new ProcessManager($processFactory, $workerMonitor, $logger, $processManagerConfig);
 
-        $this->autoScaler = new AutoScaler($this->processManager, $queueManager, $logger, $autoScalerConfig);
-        $this->scheduledScaler = new ScheduledScaler($this->processManager, $logger);
         $this->resourceMonitor = new ResourceMonitor($logger, $opsConfig);
+        $this->autoScaler = new AutoScaler(
+            $this->processManager,
+            $queueManager,
+            $logger,
+            $autoScalerConfig,
+            $this->resourceMonitor,
+        );
+        $this->scheduledScaler = new ScheduledScaler($this->processManager, $logger);
         $this->streamingMonitor = new StreamingMonitor($this->processManager, $logger);
     }
 

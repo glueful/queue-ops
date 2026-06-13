@@ -127,6 +127,7 @@ final class QueueOpsServiceProvider extends \Glueful\Extensions\ServiceProvider
                         $c->get(QueueManager::class),
                         $c->get(LoggerInterface::class),
                         $autoScalerConfig,
+                        $c->get(ResourceMonitor::class),
                     );
                 },
                 true,
