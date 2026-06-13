@@ -102,6 +102,10 @@ class ProcessManager
             // Scale down
             $toStop = $currentCount - $count;
             $queueWorkers = $this->getWorkersByQueue($queue);
+            uasort(
+                $queueWorkers,
+                static fn(WorkerProcess $a, WorkerProcess $b): int => $a->getJobsProcessed() <=> $b->getJobsProcessed()
+            );
             $stopped = 0;
 
             foreach ($queueWorkers as $worker) {

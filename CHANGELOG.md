@@ -31,6 +31,8 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - **Resource-aware scale-up.** `AutoScaler` now consults `ResourceMonitor::canScaleUp()` before
   adding workers, so configured memory/CPU/disk/load ceilings can block scale-up instead of only
   emitting a warning.
+- **Scale-down worker selection.** `ProcessManager::scale()` now stops the least-active workers
+  first when reducing a queue's worker count, instead of blindly stopping insertion order.
 - **Boot compatibility with framework 1.55.** The service provider declared its bindings via the
   DSL `services()` method but returned strongly-typed `DefinitionInterface` objects, which the
   framework's DSL service loader rejects (`"Service '<id>' must be an array"`). Under framework

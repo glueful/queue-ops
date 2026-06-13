@@ -55,6 +55,27 @@ final class ProcessManagerTest extends TestCase
         self::assertSame('worker-output', $worker->getOutput());
         self::assertSame('', $worker->getOutput());
     }
+
+    public function testScaleDownStopsLeastActiveWorkersFirst(): void
+    {
+        $factory = new PrioritizedProcessFactory([50, 0, 10]);
+        $manager = new ProcessManager(
+            $factory,
+            $this->createStub(WorkerMonitor::class),
+            new NullLogger(),
+            ['max_workers' => 5]
+        );
+
+        $manager->spawn('default', new WorkerOptions());
+        $manager->spawn('default', new WorkerOptions());
+        $manager->spawn('default', new WorkerOptions());
+
+        $manager->scale(1, 'default');
+
+        self::assertSame(['worker-2', 'worker-3'], PrioritizedWorkerProcess::$stopped);
+        self::assertSame(1, $manager->getWorkerCount('default'));
+        self::assertNotNull($manager->getWorker('worker-1'));
+    }
 }
 
 final class RecordingProcessFactory extends ProcessFactory
@@ -111,5 +132,79 @@ final class UnhealthyWorkerProcess extends WorkerProcess
     public function isHealthy(): bool
     {
         return false;
+    }
+}
+
+final class PrioritizedProcessFactory extends ProcessFactory
+{
+    /** @param array<int, int> $jobCounts */
+    public function __construct(private readonly array $jobCounts)
+    {
+        parent::__construct(new NullLogger(), sys_get_temp_dir());
+        PrioritizedWorkerProcess::$created = [];
+        PrioritizedWorkerProcess::$stopped = [];
+    }
+
+    public function createWorker(string $queue, WorkerOptions $options): WorkerProcess
+    {
+        $workerNumber = count(PrioritizedWorkerProcess::$created) + 1;
+        $workerId = 'worker-' . $workerNumber;
+        PrioritizedWorkerProcess::$created[] = $workerId;
+
+        return new PrioritizedWorkerProcess(
+            $workerId,
+            $queue,
+            $options,
+            $this->jobCounts[$workerNumber - 1] ?? 0
+        );
+    }
+}
+
+final class PrioritizedWorkerProcess extends WorkerProcess
+{
+    /** @var array<int, string> */
+    public static array $created = [];
+    /** @var array<int, string> */
+    public static array $stopped = [];
+    private bool $running = true;
+
+    public function __construct(
+        string $workerId,
+        string $queue,
+        WorkerOptions $options,
+        private readonly int $jobsProcessed
+    ) {
+        parent::__construct(
+            new Process([PHP_BINARY, '-r', '']),
+            $workerId,
+            $queue,
+            $options,
+            new NullLogger()
+        );
+    }
+
+    public function start(): void
+    {
+    }
+
+    public function stop(int $timeout = 30): void
+    {
+        self::$stopped[] = $this->getWorkerId();
+        $this->running = false;
+    }
+
+    public function forceStop(): void
+    {
+        $this->running = false;
+    }
+
+    public function isRunning(): bool
+    {
+        return $this->running;
+    }
+
+    public function getJobsProcessed(): int
+    {
+        return $this->jobsProcessed;
     }
 }
