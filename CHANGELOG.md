@@ -26,6 +26,8 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - **Scheduled scaling bounds.** Scheduled worker targets now honor `min_workers` and
   `max_workers` options at registration time, so scheduled scale operations cannot request an
   out-of-bounds worker count.
+- **Resource threshold config loading.** `ResourceMonitor` now honors the shipped
+  `resource_thresholds` config key instead of silently falling back to default thresholds.
 - **Boot compatibility with framework 1.55.** The service provider declared its bindings via the
   DSL `services()` method but returned strongly-typed `DefinitionInterface` objects, which the
   framework's DSL service loader rejects (`"Service '<id>' must be an array"`). Under framework
