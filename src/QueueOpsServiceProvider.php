@@ -33,8 +33,14 @@ final class QueueOpsServiceProvider extends \Glueful\Extensions\ServiceProvider
                 WorkerMonitorInterface::class,
                 static function (ContainerInterface $c): WorkerMonitor {
                     $context = $c->get(ApplicationContext::class);
+                    /** @var array<string, mixed> $opsConfig */
+                    $opsConfig = config($context, 'queue_ops', []);
+                    /** @var array<string, int> $monitoringConfig */
+                    $monitoringConfig = is_array($opsConfig['monitoring'] ?? null)
+                        ? $opsConfig['monitoring']
+                        : [];
                     // Builds its own Connection::fromContext($context).
-                    return new WorkerMonitor(null, true, $context);
+                    return new WorkerMonitor(null, true, $context, $monitoringConfig);
                 },
                 true, // shared
             ),

@@ -33,6 +33,8 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
   emitting a warning.
 - **Scale-down worker selection.** `ProcessManager::scale()` now stops the least-active workers
   first when reducing a queue's worker count, instead of blindly stopping insertion order.
+- **Metrics retention wiring.** `WorkerMonitor` now runs interval-guarded cleanup from its write
+  path using configurable worker and job-metrics retention settings.
 - **Boot compatibility with framework 1.55.** The service provider declared its bindings via the
   DSL `services()` method but returned strongly-typed `DefinitionInterface` objects, which the
   framework's DSL service loader rejects (`"Service '<id>' must be an array"`). Under framework

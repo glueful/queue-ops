@@ -143,6 +143,41 @@ final class WorkerMonitorOverrideTest extends TestCase
         self::assertSame('completed', $rows[0]['status'], 'status must reflect success');
         self::assertSame($job->getUuid(), $rows[0]['job_uuid']);
     }
+
+    public function testRecordJobStartPrunesMetricsPastConfiguredRetention(): void
+    {
+        $context = $this->context();
+        $connection = Connection::fromContext($context);
+
+        $monitor = new WorkerMonitor($connection, true, $context, [
+            'metrics_retention_days' => 1,
+            'cleanup_interval_seconds' => 0,
+        ]);
+
+        $bootstrapJob = new FakeJob('bootstrap-' . uniqid('', true), 'default', 1, 3);
+        $monitor->recordJobStart($bootstrapJob);
+
+        $oldJobUuid = 'old-' . uniqid('', true);
+        $connection->table('queue_job_metrics')->insert([
+            'job_uuid' => $oldJobUuid,
+            'job_class' => FakeJob::class,
+            'queue' => 'default',
+            'started_at' => date('Y-m-d H:i:s', strtotime('-3 days')),
+            'status' => 'completed',
+            'attempts' => 1,
+            'created_at' => date('Y-m-d H:i:s', strtotime('-3 days')),
+            'updated_at' => date('Y-m-d H:i:s', strtotime('-3 days')),
+        ]);
+
+        $monitor->recordJobStart(new FakeJob('fresh-' . uniqid('', true), 'default', 1, 3));
+
+        $oldRows = $connection->table('queue_job_metrics')
+            ->select(['*'])
+            ->where('job_uuid', $oldJobUuid)
+            ->get();
+
+        self::assertSame([], $oldRows);
+    }
 }
 
 /**
