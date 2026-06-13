@@ -155,6 +155,7 @@ class ProcessFactory
     {
         return array_merge($this->environment, [
             'WORKER_ID' => $workerId,
+            'QUEUE_SUPERVISOR_PID' => (string) getmypid(),
             'WORKER_MEMORY_LIMIT' => (string) $options->memory,
             'WORKER_TIMEOUT' => (string) $options->timeout,
             'WORKER_ENABLE_MONITORING' => '1',

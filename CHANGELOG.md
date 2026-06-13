@@ -35,6 +35,8 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
   first when reducing a queue's worker count, instead of blindly stopping insertion order.
 - **Metrics retention wiring.** `WorkerMonitor` now runs interval-guarded cleanup from its write
   path using configurable worker and job-metrics retention settings.
+- **Orphan worker shutdown.** Spawned leaf workers now receive their supervisor PID and exit their
+  process loop when that parent process is no longer alive.
 - **Boot compatibility with framework 1.55.** The service provider declared its bindings via the
   DSL `services()` method but returned strongly-typed `DefinitionInterface` objects, which the
   framework's DSL service loader rejects (`"Service '<id>' must be an array"`). Under framework
