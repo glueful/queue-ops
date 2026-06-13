@@ -38,6 +38,23 @@ final class ProcessManagerTest extends TestCase
         $manager->monitorHealth();
         self::assertSame(2, $factory->created, 'restart limit blocks the next restart in the same hour');
     }
+
+    public function testWorkerOutputReadsDrainProcessBuffer(): void
+    {
+        $worker = new WorkerProcess(
+            new Process([PHP_BINARY, '-r', 'echo "worker-output";']),
+            'worker-output-test',
+            'default',
+            new WorkerOptions(),
+            new NullLogger()
+        );
+
+        $worker->start();
+        usleep(200000);
+
+        self::assertSame('worker-output', $worker->getOutput());
+        self::assertSame('', $worker->getOutput());
+    }
 }
 
 final class RecordingProcessFactory extends ProcessFactory
