@@ -15,6 +15,9 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ### Fixed
 
+- **Restart storm control.** `ProcessManager::monitorHealth()` now honors
+  `max_restarts_per_hour` per queue before restarting unhealthy workers, so a
+  crash-on-boot worker cannot be respawned indefinitely.
 - **Boot compatibility with framework 1.55.** The service provider declared its bindings via the
   DSL `services()` method but returned strongly-typed `DefinitionInterface` objects, which the
   framework's DSL service loader rejects (`"Service '<id>' must be an array"`). Under framework
