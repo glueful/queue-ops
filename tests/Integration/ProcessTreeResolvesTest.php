@@ -23,7 +23,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * Smoke test for WS4c: the Process supervision / auto-scaling tree copied into
- * the extension is registered in QueueOpsServiceProvider::services() and every
+ * the extension is registered in QueueOpsServiceProvider::defs() and every
  * container-resolved class constructs with all deps satisfied.
  *
  * Harness mirrors WorkerMonitorOverrideTest: build the real framework Container,
@@ -87,7 +87,7 @@ final class ProcessTreeResolvesTest extends TestCase
         $context->setContainer($container);
 
         // queue-ops provider definitions applied AFTER core.
-        $container->load(QueueOpsServiceProvider::services());
+        $container->load(QueueOpsServiceProvider::defs());
 
         return $container;
     }

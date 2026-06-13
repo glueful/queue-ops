@@ -40,6 +40,8 @@ class ScheduledScaler
         int $workerCount,
         array $options = []
     ): void {
+        $workerCount = $this->normalizeWorkerCount($workerCount, $options);
+
         $this->schedules[$name] = [
             'cron' => $cronExpression,
             'queue' => $queueName,
@@ -51,6 +53,21 @@ class ScheduledScaler
         ];
 
         $this->updateNextRunTime($name);
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     */
+    private function normalizeWorkerCount(int $workerCount, array $options): int
+    {
+        $minWorkers = max(0, (int) ($options['min_workers'] ?? 0));
+        $maxWorkers = (int) ($options['max_workers'] ?? PHP_INT_MAX);
+
+        if ($maxWorkers < $minWorkers) {
+            $maxWorkers = $minWorkers;
+        }
+
+        return min(max($workerCount, $minWorkers), $maxWorkers);
     }
 
     /**

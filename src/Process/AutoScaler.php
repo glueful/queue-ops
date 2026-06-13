@@ -20,6 +20,7 @@ class AutoScaler
     private ProcessManager $processManager;
     private QueueManager $queueManager;
     private LoggerInterface $logger;
+    private ?ResourceMonitor $resourceMonitor;
     /** @var array<string, mixed> */
     private array $config;
     /** @var array<string, int> */
@@ -34,12 +35,14 @@ class AutoScaler
         ProcessManager $processManager,
         QueueManager $queueManager,
         LoggerInterface $logger,
-        array $config = []
+        array $config = [],
+        ?ResourceMonitor $resourceMonitor = null
     ) {
         $this->processManager = $processManager;
         $this->queueManager = $queueManager;
         $this->logger = $logger;
         $this->config = array_merge($this->getDefaultConfig(), $config);
+        $this->resourceMonitor = $resourceMonitor;
     }
 
     /**
@@ -93,6 +96,10 @@ class AutoScaler
         $targetWorkers = $decision['target_workers'];
 
         try {
+            if ($targetWorkers > $currentWorkers && !$this->canScaleUpForResources($targetWorkers - $currentWorkers)) {
+                return null;
+            }
+
             $workerOptions = $this->createWorkerOptions($queueConfig);
             $this->processManager->scale($targetWorkers, $queueName, $workerOptions);
 
@@ -115,6 +122,25 @@ class AutoScaler
 
             return null;
         }
+    }
+
+    private function canScaleUpForResources(int $additionalWorkers): bool
+    {
+        if ($this->resourceMonitor === null) {
+            return true;
+        }
+
+        $resourceCheck = $this->resourceMonitor->canScaleUp($additionalWorkers);
+        if ((bool) ($resourceCheck['can_scale'] ?? false)) {
+            return true;
+        }
+
+        $this->logger->warning('Scale-up blocked by resource limits', [
+            'additional_workers' => $additionalWorkers,
+            'reasons' => $resourceCheck['reasons'] ?? [],
+        ]);
+
+        return false;
     }
 
     /**

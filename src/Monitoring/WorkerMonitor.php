@@ -42,22 +42,32 @@ class WorkerMonitor implements WorkerMonitorInterface
     /** @var bool Whether monitoring is enabled */
     private bool $enabled;
     private ?ApplicationContext $context;
+    /** @var array<string, int> */
+    private array $retentionConfig;
+    private int $lastCleanupAt = 0;
 
     /**
      * Create worker monitor instance
      *
      * @param Connection|null $connection Database connection (optional)
      * @param bool $enabled Whether monitoring is enabled
+     * @param array<string, int> $retentionConfig Retention and cleanup interval settings
      */
     public function __construct(
         ?Connection $connection = null,
         bool $enabled = true,
-        ?ApplicationContext $context = null
+        ?ApplicationContext $context = null,
+        array $retentionConfig = []
     ) {
         $this->context = $context;
         $this->db = $connection ?? Connection::fromContext($this->context);
         $this->schema = $this->db->getSchemaBuilder();
         $this->enabled = $enabled;
+        $this->retentionConfig = array_merge([
+            'worker_retention_days' => 7,
+            'metrics_retention_days' => 30,
+            'cleanup_interval_seconds' => 3600,
+        ], $retentionConfig);
     }
 
     /**
@@ -97,6 +107,7 @@ class WorkerMonitor implements WorkerMonitorInterface
         ]);
 
         $this->db->table($this->workersTable)->insert($data);
+        $this->cleanupRetentionIfDue();
     }
 
     /**
@@ -191,6 +202,7 @@ class WorkerMonitor implements WorkerMonitorInterface
         ];
 
         $this->db->table($this->metricsTable)->insert($data);
+        $this->cleanupRetentionIfDue();
     }
 
     /**
@@ -448,6 +460,10 @@ class WorkerMonitor implements WorkerMonitorInterface
             return false;
         }
 
+        if (!$this->tableExists($this->workersTable)) {
+            return false;
+        }
+
         $cutoff = date('Y-m-d H:i:s', time() - ($daysOld * 24 * 60 * 60));
 
         return $this->db->table($this->workersTable)
@@ -468,11 +484,29 @@ class WorkerMonitor implements WorkerMonitorInterface
             return false;
         }
 
+        if (!$this->tableExists($this->metricsTable)) {
+            return false;
+        }
+
         $cutoff = date('Y-m-d H:i:s', time() - ($daysOld * 24 * 60 * 60));
 
         return $this->db->table($this->metricsTable)
             ->where('created_at', '<', $cutoff)
             ->delete() > 0;
+    }
+
+    private function cleanupRetentionIfDue(): void
+    {
+        $interval = max(0, (int) $this->retentionConfig['cleanup_interval_seconds']);
+        $now = time();
+
+        if ($interval > 0 && ($now - $this->lastCleanupAt) < $interval) {
+            return;
+        }
+
+        $this->lastCleanupAt = $now;
+        $this->cleanupOldWorkers((int) $this->retentionConfig['worker_retention_days']);
+        $this->cleanupOldMetrics((int) $this->retentionConfig['metrics_retention_days']);
     }
 
     /**

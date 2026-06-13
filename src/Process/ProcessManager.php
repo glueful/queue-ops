@@ -23,6 +23,8 @@ class ProcessManager
     private LoggerInterface $logger;
     /** @var array<string, mixed> */
     private array $config;
+    /** @var array<string, array<int, int>> */
+    private array $restartHistory = [];
 
     /**
      * @param array<string, mixed> $config
@@ -47,6 +49,7 @@ class ProcessManager
             'max_workers' => $resolvedMaxWorkers,
             'restart_delay' => 5,
             'health_check_interval' => 30,
+            'max_restarts_per_hour' => 10,
         ], $config);
 
         // Normalize legacy/newer config keys to a single canonical key.
@@ -99,6 +102,10 @@ class ProcessManager
             // Scale down
             $toStop = $currentCount - $count;
             $queueWorkers = $this->getWorkersByQueue($queue);
+            uasort(
+                $queueWorkers,
+                static fn(WorkerProcess $a, WorkerProcess $b): int => $a->getJobsProcessed() <=> $b->getJobsProcessed()
+            );
             $stopped = 0;
 
             foreach ($queueWorkers as $worker) {
@@ -231,8 +238,18 @@ class ProcessManager
                     'last_heartbeat' => $worker->getLastHeartbeat(),
                 ]);
 
+                if (!$this->canRestart($worker->getQueue())) {
+                    $this->logger->error('Worker restart limit reached; leaving worker stopped', [
+                        'worker_id' => $worker->getWorkerId(),
+                        'queue' => $worker->getQueue(),
+                        'max_restarts_per_hour' => $this->config['max_restarts_per_hour'],
+                    ]);
+                    continue;
+                }
+
                 // Attempt to restart unhealthy workers
                 try {
+                    $this->recordRestart($worker->getQueue());
                     $this->restart($worker->getWorkerId());
                 } catch (\Exception $e) {
                     $this->logger->error('Failed to restart unhealthy worker', [
@@ -242,6 +259,33 @@ class ProcessManager
                 }
             }
         }
+    }
+
+    private function canRestart(string $queue): bool
+    {
+        $maxRestarts = (int) ($this->config['max_restarts_per_hour'] ?? 10);
+        if ($maxRestarts <= 0) {
+            return false;
+        }
+
+        $this->pruneRestartHistory($queue);
+
+        return count($this->restartHistory[$queue] ?? []) < $maxRestarts;
+    }
+
+    private function recordRestart(string $queue): void
+    {
+        $this->pruneRestartHistory($queue);
+        $this->restartHistory[$queue][] = time();
+    }
+
+    private function pruneRestartHistory(string $queue): void
+    {
+        $cutoff = time() - 3600;
+        $this->restartHistory[$queue] = array_values(array_filter(
+            $this->restartHistory[$queue] ?? [],
+            static fn(int $timestamp): bool => $timestamp >= $cutoff
+        ));
     }
 
     public function getWorkerCount(?string $queue = null): int

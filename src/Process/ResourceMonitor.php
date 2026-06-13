@@ -28,6 +28,9 @@ class ResourceMonitor
     public function __construct(LoggerInterface $logger, array $config = [])
     {
         $this->logger = $logger;
+        if (isset($config['resource_thresholds']) && !isset($config['thresholds'])) {
+            $config['thresholds'] = $config['resource_thresholds'];
+        }
         $this->config = array_merge($this->getDefaultConfig(), $config);
         $this->thresholds = $this->config['thresholds'];
     }

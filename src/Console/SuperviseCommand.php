@@ -272,6 +272,8 @@ class SuperviseCommand extends BaseQueueCommand
         $driver = $queueManager->connection();
 
         $envWorkerId = $_ENV['WORKER_ID'] ?? null;
+        $envSupervisorPid = $_ENV['QUEUE_SUPERVISOR_PID'] ?? getenv('QUEUE_SUPERVISOR_PID');
+        $supervisorPid = is_string($envSupervisorPid) && $envSupervisorPid !== '' ? $envSupervisorPid : null;
         $hostname = gethostname();
         $workerId = is_string($envWorkerId) && $envWorkerId !== ''
             ? $envWorkerId
@@ -291,6 +293,10 @@ class SuperviseCommand extends BaseQueueCommand
         }
 
         while ($running) {
+            if (!self::isSupervisorParentAlive(is_string($supervisorPid) ? $supervisorPid : null)) {
+                return self::SUCCESS;
+            }
+
             if ($emitHeartbeat && (time() - $lastHeartbeatAt) >= 15) {
                 $lastHeartbeatAt = time();
                 echo '[HEARTBEAT] worker=' . $workerId . ' ts=' . date('c') . PHP_EOL;
@@ -361,6 +367,24 @@ class SuperviseCommand extends BaseQueueCommand
         }
 
         return self::SUCCESS;
+    }
+
+    public static function isSupervisorParentAlive(?string $pid): bool
+    {
+        if ($pid === null || $pid === '') {
+            return true;
+        }
+
+        $pidValue = filter_var($pid, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        if ($pidValue === false) {
+            return false;
+        }
+
+        if (function_exists('posix_kill')) {
+            return posix_kill((int) $pidValue, 0);
+        }
+
+        return file_exists('/proc/' . $pidValue);
     }
 
     private function executeSpawn(InputInterface $input): int
@@ -523,6 +547,9 @@ class SuperviseCommand extends BaseQueueCommand
             pcntl_signal(SIGINT, function () use (&$running) {
                 $running = false;
             });
+            pcntl_signal(SIGTERM, function () use (&$running) {
+                $running = false;
+            });
         }
 
         while ($running) {
@@ -552,6 +579,9 @@ class SuperviseCommand extends BaseQueueCommand
         $running = true;
         if (function_exists('pcntl_signal')) {
             pcntl_signal(SIGINT, function () use (&$running) {
+                $running = false;
+            });
+            pcntl_signal(SIGTERM, function () use (&$running) {
                 $running = false;
             });
         }

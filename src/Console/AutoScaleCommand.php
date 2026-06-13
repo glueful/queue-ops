@@ -243,9 +243,15 @@ class AutoScaleCommand extends BaseQueueCommand
         $processFactory = new ProcessFactory($logger, $basePath);
         $this->processManager = new ProcessManager($processFactory, $workerMonitor, $logger, $processManagerConfig);
 
-        $this->autoScaler = new AutoScaler($this->processManager, $queueManager, $logger, $autoScalerConfig);
-        $this->scheduledScaler = new ScheduledScaler($this->processManager, $logger);
         $this->resourceMonitor = new ResourceMonitor($logger, $opsConfig);
+        $this->autoScaler = new AutoScaler(
+            $this->processManager,
+            $queueManager,
+            $logger,
+            $autoScalerConfig,
+            $this->resourceMonitor,
+        );
+        $this->scheduledScaler = new ScheduledScaler($this->processManager, $logger);
         $this->streamingMonitor = new StreamingMonitor($this->processManager, $logger);
     }
 
@@ -275,7 +281,7 @@ class AutoScaleCommand extends BaseQueueCommand
 
     private function executeRun(InputInterface $input): int
     {
-        $interval = (int) $input->getOption('interval');
+        $interval = self::normalizeCheckInterval($input->getOption('interval'));
         $enableResourceChecks = !(bool) $input->getOption('no-resource-checks');
         $enableScheduling = !(bool) $input->getOption('no-scheduling');
         $enableStreaming = (bool) $input->getOption('streaming');
@@ -327,6 +333,11 @@ class AutoScaleCommand extends BaseQueueCommand
 
         $this->info("Auto-scaling daemon stopped");
         return self::SUCCESS;
+    }
+
+    public static function normalizeCheckInterval(mixed $interval): int
+    {
+        return max(1, (int) $interval);
     }
 
     private function performScalingCycle(bool $enableResourceChecks, bool $enableScheduling): void
@@ -492,15 +503,16 @@ class AutoScaleCommand extends BaseQueueCommand
         $this->line();
 
         // Setup signal handlers for graceful shutdown
-        $streaming = true;
         if (function_exists('pcntl_signal')) {
-            pcntl_signal(SIGINT, function () use (&$streaming, $exportFile) {
-                $streaming = false;
+            $stopStreaming = function () use ($exportFile): void {
+                $this->streamingMonitor->stopStreaming();
                 if ($exportFile !== null) {
                     $this->streamingMonitor->exportOutput($exportFile);
                     echo "\nOutput exported to: {$exportFile}\n";
                 }
-            });
+            };
+            pcntl_signal(SIGINT, $stopStreaming);
+            pcntl_signal(SIGTERM, $stopStreaming);
         }
 
         try {

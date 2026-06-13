@@ -118,12 +118,12 @@ class WorkerProcess
 
     public function getOutput(): string
     {
-        return $this->process->getOutput();
+        return $this->process->getIncrementalOutput();
     }
 
     public function getErrorOutput(): string
     {
-        return $this->process->getErrorOutput();
+        return $this->process->getIncrementalErrorOutput();
     }
 
     public function getExitCode(): ?int

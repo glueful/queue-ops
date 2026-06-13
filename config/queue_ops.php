@@ -143,6 +143,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Monitoring Retention
+    |--------------------------------------------------------------------------
+    | Retention for persisted worker and job metrics written by WorkerMonitor.
+    */
+    'monitoring' => [
+        'worker_retention_days' => env('QUEUE_WORKER_RETENTION_DAYS', 7),
+        'metrics_retention_days' => env('QUEUE_METRICS_RETENTION_DAYS', 30),
+        'cleanup_interval_seconds' => env('QUEUE_METRICS_CLEANUP_INTERVAL', 3600),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Legacy Supervisor Support
     |--------------------------------------------------------------------------
     | Legacy supervisor configuration (use process management instead).

@@ -4,6 +4,50 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+## [1.0.1] - 2026-06-13
+
+### Added
+
+- **Discovery-path regression test.** Loads the provider through the framework's real
+  extension-discovery dispatch (`defs()` pass-through, else `services()` via the DSL loader),
+  guarding against typed `Definition` objects being returned from `services()` — a regression the
+  existing `Container::load()`-based tests cannot catch.
+
+### Fixed
+
+- **Restart storm control.** `ProcessManager::monitorHealth()` now honors
+  `max_restarts_per_hour` per queue before restarting unhealthy workers, so a
+  crash-on-boot worker cannot be respawned indefinitely.
+- **Bounded worker output reads.** `WorkerProcess` now drains incremental stdout/stderr buffers
+  when supervisors read worker output, avoiding repeated retention of the full Symfony Process
+  output buffer for long-running workers.
+- **Autoscale interval clamp.** `queue:autoscale run --interval` is now clamped to at least one
+  second, preventing zero or negative values from creating a busy loop.
+- **Scheduled scaling bounds.** Scheduled worker targets now honor `min_workers` and
+  `max_workers` options at registration time, so scheduled scale operations cannot request an
+  out-of-bounds worker count.
+- **Resource threshold config loading.** `ResourceMonitor` now honors the shipped
+  `resource_thresholds` config key instead of silently falling back to default thresholds.
+- **Resource-aware scale-up.** `AutoScaler` now consults `ResourceMonitor::canScaleUp()` before
+  adding workers, so configured memory/CPU/disk/load ceilings can block scale-up instead of only
+  emitting a warning.
+- **Scale-down worker selection.** `ProcessManager::scale()` now stops the least-active workers
+  first when reducing a queue's worker count, instead of blindly stopping insertion order.
+- **Metrics retention wiring.** `WorkerMonitor` now runs interval-guarded cleanup from its write
+  path using configurable worker and job-metrics retention settings.
+- **Orphan worker shutdown.** Spawned leaf workers now receive their supervisor PID and exit their
+  process loop when that parent process is no longer alive.
+- **SIGTERM handling.** Long-running supervise monitor/watch loops and autoscale streaming now
+  respond to SIGTERM as well as SIGINT, and streaming mode stops its monitor loop before export.
+- **Boot compatibility with framework 1.55.** The service provider declared its bindings via the
+  DSL `services()` method but returned strongly-typed `DefinitionInterface` objects, which the
+  framework's DSL service loader rejects (`"Service '<id>' must be an array"`). Under framework
+  1.55 this threw during boot in dev/test and silently dropped the bindings in production. The
+  method is now `defs()`, the strongly-typed pass-through path that accepts `DefinitionInterface`
+  objects.
+
 ## [1.0.0] - 2026-06-07 — Initial release (extracted from Glueful framework 1.52.0)
 
 Queue operations — worker supervision, autoscaling, and worker/job metrics —

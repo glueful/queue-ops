@@ -11,7 +11,7 @@
         "symfony/process": "^7.4"
     },
     "require-dev": {
-        "glueful/framework": "^1.52.0",
+        "glueful/framework": "^1.56.0",
         "phpunit/phpunit": "^10.5",
         "squizlabs/php_codesniffer": "^3.6",
         "phpstan/phpstan": "^1.0"
@@ -35,11 +35,11 @@
             "name": "QueueOps",
             "displayName": "Queue Ops",
             "description": "Queue operations for Glueful: supervision, autoscaling, worker metrics.",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "categories": ["queue", "operations"],
             "publisher": "glueful-team",
             "provider": "Glueful\\Extensions\\QueueOps\\QueueOpsServiceProvider",
-            "requires": { "glueful": ">=1.52.0", "extensions": [] }
+            "requires": { "glueful": ">=1.56.0", "extensions": [] }
         }
     },
     "config": { "sort-packages": true }

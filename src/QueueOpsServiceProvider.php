@@ -21,7 +21,10 @@ use Psr\Log\LoggerInterface;
 
 final class QueueOpsServiceProvider extends \Glueful\Extensions\ServiceProvider
 {
-    public static function services(): array
+    /**
+     * @return array<string, mixed>
+     */
+    public static function defs(): array
     {
         return [
             // Override core's WorkerMonitorInterface => NullWorkerMonitor default
@@ -30,8 +33,14 @@ final class QueueOpsServiceProvider extends \Glueful\Extensions\ServiceProvider
                 WorkerMonitorInterface::class,
                 static function (ContainerInterface $c): WorkerMonitor {
                     $context = $c->get(ApplicationContext::class);
+                    /** @var array<string, mixed> $opsConfig */
+                    $opsConfig = config($context, 'queue_ops', []);
+                    /** @var array<string, int> $monitoringConfig */
+                    $monitoringConfig = is_array($opsConfig['monitoring'] ?? null)
+                        ? $opsConfig['monitoring']
+                        : [];
                     // Builds its own Connection::fromContext($context).
-                    return new WorkerMonitor(null, true, $context);
+                    return new WorkerMonitor(null, true, $context, $monitoringConfig);
                 },
                 true, // shared
             ),
@@ -124,6 +133,7 @@ final class QueueOpsServiceProvider extends \Glueful\Extensions\ServiceProvider
                         $c->get(QueueManager::class),
                         $c->get(LoggerInterface::class),
                         $autoScalerConfig,
+                        $c->get(ResourceMonitor::class),
                     );
                 },
                 true,
