@@ -21,6 +21,8 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - **Bounded worker output reads.** `WorkerProcess` now drains incremental stdout/stderr buffers
   when supervisors read worker output, avoiding repeated retention of the full Symfony Process
   output buffer for long-running workers.
+- **Autoscale interval clamp.** `queue:autoscale run --interval` is now clamped to at least one
+  second, preventing zero or negative values from creating a busy loop.
 - **Boot compatibility with framework 1.55.** The service provider declared its bindings via the
   DSL `services()` method but returned strongly-typed `DefinitionInterface` objects, which the
   framework's DSL service loader rejects (`"Service '<id>' must be an array"`). Under framework

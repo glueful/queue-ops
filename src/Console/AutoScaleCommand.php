@@ -275,7 +275,7 @@ class AutoScaleCommand extends BaseQueueCommand
 
     private function executeRun(InputInterface $input): int
     {
-        $interval = (int) $input->getOption('interval');
+        $interval = self::normalizeCheckInterval($input->getOption('interval'));
         $enableResourceChecks = !(bool) $input->getOption('no-resource-checks');
         $enableScheduling = !(bool) $input->getOption('no-scheduling');
         $enableStreaming = (bool) $input->getOption('streaming');
@@ -327,6 +327,11 @@ class AutoScaleCommand extends BaseQueueCommand
 
         $this->info("Auto-scaling daemon stopped");
         return self::SUCCESS;
+    }
+
+    public static function normalizeCheckInterval(mixed $interval): int
+    {
+        return max(1, (int) $interval);
     }
 
     private function performScalingCycle(bool $enableResourceChecks, bool $enableScheduling): void
