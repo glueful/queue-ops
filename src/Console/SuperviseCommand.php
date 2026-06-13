@@ -547,6 +547,9 @@ class SuperviseCommand extends BaseQueueCommand
             pcntl_signal(SIGINT, function () use (&$running) {
                 $running = false;
             });
+            pcntl_signal(SIGTERM, function () use (&$running) {
+                $running = false;
+            });
         }
 
         while ($running) {
@@ -576,6 +579,9 @@ class SuperviseCommand extends BaseQueueCommand
         $running = true;
         if (function_exists('pcntl_signal')) {
             pcntl_signal(SIGINT, function () use (&$running) {
+                $running = false;
+            });
+            pcntl_signal(SIGTERM, function () use (&$running) {
                 $running = false;
             });
         }

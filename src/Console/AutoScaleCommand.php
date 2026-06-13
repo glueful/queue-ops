@@ -503,15 +503,16 @@ class AutoScaleCommand extends BaseQueueCommand
         $this->line();
 
         // Setup signal handlers for graceful shutdown
-        $streaming = true;
         if (function_exists('pcntl_signal')) {
-            pcntl_signal(SIGINT, function () use (&$streaming, $exportFile) {
-                $streaming = false;
+            $stopStreaming = function () use ($exportFile): void {
+                $this->streamingMonitor->stopStreaming();
                 if ($exportFile !== null) {
                     $this->streamingMonitor->exportOutput($exportFile);
                     echo "\nOutput exported to: {$exportFile}\n";
                 }
-            });
+            };
+            pcntl_signal(SIGINT, $stopStreaming);
+            pcntl_signal(SIGTERM, $stopStreaming);
         }
 
         try {

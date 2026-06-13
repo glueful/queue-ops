@@ -37,6 +37,8 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
   path using configurable worker and job-metrics retention settings.
 - **Orphan worker shutdown.** Spawned leaf workers now receive their supervisor PID and exit their
   process loop when that parent process is no longer alive.
+- **SIGTERM handling.** Long-running supervise monitor/watch loops and autoscale streaming now
+  respond to SIGTERM as well as SIGINT, and streaming mode stops its monitor loop before export.
 - **Boot compatibility with framework 1.55.** The service provider declared its bindings via the
   DSL `services()` method but returned strongly-typed `DefinitionInterface` objects, which the
   framework's DSL service loader rejects (`"Service '<id>' must be an array"`). Under framework
