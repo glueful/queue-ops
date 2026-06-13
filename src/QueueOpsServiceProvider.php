@@ -21,7 +21,10 @@ use Psr\Log\LoggerInterface;
 
 final class QueueOpsServiceProvider extends \Glueful\Extensions\ServiceProvider
 {
-    public static function services(): array
+    /**
+     * @return array<string, mixed>
+     */
+    public static function defs(): array
     {
         return [
             // Override core's WorkerMonitorInterface => NullWorkerMonitor default

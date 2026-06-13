@@ -24,7 +24,7 @@ use PHPUnit\Framework\TestCase;
  *
  * Harness:
  * - Override resolve: build the real framework Container, load core's null
- *   binding FIRST, then load QueueOpsServiceProvider::services() AFTER.
+ *   binding FIRST, then load QueueOpsServiceProvider::defs() AFTER.
  *   Container::load() overwrites by id, mirroring provider-registration order.
  * - DB write: construct the concrete WorkerMonitor against a file-based SQLite
  *   Connection (pooling off) and assert the lazy createMetricsTable() (R5)
@@ -83,7 +83,7 @@ final class WorkerMonitorOverrideTest extends TestCase
         $context->setContainer($container);
 
         // 2. queue-ops provider definitions applied AFTER core (last-provider-wins).
-        $container->load(QueueOpsServiceProvider::services());
+        $container->load(QueueOpsServiceProvider::defs());
 
         $resolved = $container->get(WorkerMonitorInterface::class);
 
@@ -107,7 +107,7 @@ final class WorkerMonitorOverrideTest extends TestCase
             ),
         ]);
         $context->setContainer($container);
-        $container->load(QueueOpsServiceProvider::services());
+        $container->load(QueueOpsServiceProvider::defs());
 
         $viaInterface = $container->get(WorkerMonitorInterface::class);
         $viaConcrete = $container->get(WorkerMonitor::class);
