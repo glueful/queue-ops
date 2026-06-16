@@ -3,8 +3,19 @@
     "description": "Queue operations for Glueful (worker supervision, autoscaling, worker/job metrics).",
     "type": "glueful-extension",
     "license": "MIT",
-    "authors": [{ "name": "Michael Tawiah Sowah", "email": "michael@glueful.dev" }],
-    "keywords": ["queue", "workers", "autoscaling", "operations", "glueful"],
+    "authors": [
+        {
+            "name": "Michael Tawiah Sowah",
+            "email": "michael@glueful.dev"
+        }
+    ],
+    "keywords": [
+        "queue",
+        "workers",
+        "autoscaling",
+        "operations",
+        "glueful"
+    ],
     "require": {
         "php": "^8.3",
         "dragonmantank/cron-expression": "^3.4",
@@ -18,11 +29,17 @@
     },
     "homepage": "https://github.com/glueful/queue-ops",
     "autoload": {
-        "psr-4": { "Glueful\\Extensions\\QueueOps\\": "src/" },
-        "classmap": ["migrations/"]
+        "psr-4": {
+            "Glueful\\Extensions\\QueueOps\\": "src/"
+        },
+        "classmap": [
+            "migrations/"
+        ]
     },
     "autoload-dev": {
-        "psr-4": { "Glueful\\Extensions\\QueueOps\\Tests\\": "tests/" }
+        "psr-4": {
+            "Glueful\\Extensions\\QueueOps\\Tests\\": "tests/"
+        }
     },
     "scripts": {
         "test": "vendor/bin/phpunit",
@@ -35,12 +52,20 @@
             "name": "QueueOps",
             "displayName": "Queue Ops",
             "description": "Queue operations for Glueful: supervision, autoscaling, worker metrics.",
-            "version": "1.0.1",
-            "categories": ["queue", "operations"],
+            "version": "1.0.2",
+            "categories": [
+                "queue",
+                "operations"
+            ],
             "publisher": "glueful-team",
             "provider": "Glueful\\Extensions\\QueueOps\\QueueOpsServiceProvider",
-            "requires": { "glueful": ">=1.56.0", "extensions": [] }
+            "requires": {
+                "glueful": ">=1.56.0",
+                "extensions": []
+            }
         }
     },
-    "config": { "sort-packages": true }
+    "config": {
+        "sort-packages": true
+    }
 }

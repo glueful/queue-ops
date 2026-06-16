@@ -206,7 +206,10 @@ final class QueueOpsServiceProvider extends \Glueful\Extensions\ServiceProvider
         // auto_scaling,resource_limits,resource_thresholds,supervisor}` blocks and
         // the per-queue worker/max_worker/auto_scale keys now live under `queue_ops.*`.
         $this->mergeConfig('queue_ops', require __DIR__ . '/../config/queue_ops.php');
+    }
 
+    public function boot(ApplicationContext $context): void
+    {
         // queue_workers + queue_job_metrics schema. Registered unconditionally:
         // ops persistence IS this extension's purpose (not config-gated).
         $this->loadMigrationsFrom(
@@ -214,10 +217,7 @@ final class QueueOpsServiceProvider extends \Glueful\Extensions\ServiceProvider
             \Glueful\Database\Migrations\MigrationPriority::DEFAULT,
             'glueful/queue-ops',
         );
-    }
 
-    public function boot(ApplicationContext $context): void
-    {
         // Auto-discover #[AsCommand] CLI commands (SuperviseCommand + AutoScaleCommand).
         $this->discoverCommands(
             'Glueful\\Extensions\\QueueOps\\Console',
