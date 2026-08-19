@@ -52,7 +52,7 @@
             "name": "QueueOps",
             "displayName": "Queue Ops",
             "description": "Queue operations for Glueful: supervision, autoscaling, worker metrics.",
-            "version": "1.0.2",
+            "version": "1.1.0",
             "categories": [
                 "queue",
                 "operations"
