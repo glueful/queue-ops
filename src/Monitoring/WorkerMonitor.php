@@ -578,7 +578,7 @@ class WorkerMonitor implements WorkerMonitorInterface
 
             // Add indexes
             $table->unique('uuid');
-            $table->index('status', 'idx_status');
+            $table->index('status', 'idx_queue_workers_status');
             $table->index('last_seen', 'idx_last_seen');
             $table->index(['connection', 'queue'], 'idx_connection_queue');
 
@@ -619,7 +619,7 @@ class WorkerMonitor implements WorkerMonitorInterface
 
             // Add indexes
             $table->unique('job_uuid', 'idx_job_uuid');
-            $table->index('status', 'idx_status');
+            $table->index('status', 'idx_queue_job_metrics_status');
             $table->index('queue', 'idx_queue');
             $table->index('created_at', 'idx_created_at');
 

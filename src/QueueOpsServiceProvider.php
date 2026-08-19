@@ -210,14 +210,6 @@ final class QueueOpsServiceProvider extends \Glueful\Extensions\ServiceProvider
 
     public function boot(ApplicationContext $context): void
     {
-        // queue_workers + queue_job_metrics schema. Registered unconditionally:
-        // ops persistence IS this extension's purpose (not config-gated).
-        $this->loadMigrationsFrom(
-            __DIR__ . '/../migrations',
-            \Glueful\Database\Migrations\MigrationPriority::DEFAULT,
-            'glueful/queue-ops',
-        );
-
         // Auto-discover #[AsCommand] CLI commands (SuperviseCommand + AutoScaleCommand).
         $this->discoverCommands(
             'Glueful\\Extensions\\QueueOps\\Console',

@@ -280,13 +280,16 @@ final class SuperviseSpawnsLeafWorkersTest extends TestCase
 
 /**
  * Job recording its executions, used to prove the leaf loop fired it.
+ *
+ * Extends the framework's canonical Job base class: JobHandlerResolver refuses
+ * to instantiate payload-stored handler classes that don't implement
+ * JobInterface (framework >=1.7x queue hardening).
  */
-final class SupervisedLeafJob
+final class SupervisedLeafJob extends \Glueful\Queue\Job
 {
     public static int $ran = 0;
 
-    /** @param array<string,mixed> $data */
-    public function handle(array $data): void
+    public function handle(): void
     {
         self::$ran++;
     }

@@ -44,7 +44,7 @@ class CreateQueueWorkersTable implements MigrationInterface
                 $table->timestamp('updated_at')->default('CURRENT_TIMESTAMP');
 
                 $table->unique('uuid');
-                $table->index('status', 'idx_status');
+                $table->index('status', 'idx_queue_workers_status');
                 $table->index('last_seen', 'idx_last_seen');
                 $table->index(['connection', 'queue'], 'idx_connection_queue');
             });

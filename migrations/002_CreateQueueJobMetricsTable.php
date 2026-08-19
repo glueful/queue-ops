@@ -38,7 +38,7 @@ class CreateQueueJobMetricsTable implements MigrationInterface
                 $table->timestamp('updated_at')->default('CURRENT_TIMESTAMP');
 
                 $table->unique('job_uuid', 'idx_job_uuid');
-                $table->index('status', 'idx_status');
+                $table->index('status', 'idx_queue_job_metrics_status');
                 $table->index('queue', 'idx_queue');
                 $table->index('created_at', 'idx_created_at');
             });

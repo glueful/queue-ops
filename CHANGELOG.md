@@ -6,6 +6,18 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ## [Unreleased]
 
+### Added
+- Declares the Glueful schema manifest (migration descriptors, requires.extensions, structural
+  verifier); requires framework >=1.79.0 for schema-on-enable participation. Migrations are now
+  registered by the manifest, not by provider boot.
+
+### Fixed
+- Both tables named their status index `idx_status`, which collides on engines with a
+  database-global index namespace (SQLite, PostgreSQL) — migration 002 could never apply after
+  001 there. Renamed to table-prefixed names (`idx_queue_workers_status`,
+  `idx_queue_job_metrics_status`) in the migrations and the WorkerMonitor lazy-create fallback.
+  Existing databases keep their old index names; only fresh installs are affected.
+
 ## [1.0.2] - 2026-06-16
 
 ### Fixed
